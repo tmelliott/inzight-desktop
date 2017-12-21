@@ -153,27 +153,45 @@ if (process.platform === 'darwin') {
 /**
   * Spin up an Rserve daemon, and connect to it!
   */
-const { exec } = require('child_process')
+const { execSync } = require('child_process')
 const Rserve = require('rserve-js')
-// let Rdaemon
-global.Rcon = 0
+let Rdaemon
+// global.Rcon = 0
+global.Rtries = 0
 
 function startRdaemon () {
-  exec('R -e \'Rserve::Rserve(args = "--no-save")\'', function (error, stdout, stderr) {
-    if (error !== null) {
-      console.log('exec error: ' + error)
-    }
-    console.log('Rserve daemon launched.')
-
-    global.Rcon = Rserve.connect('localhost', 6311, function () {
-      global.Rcon.eval('as.character(getRversion())', function (err, res) {
-        if (err) {
-          throw err
-        }
-        global.Rversion = res[0]
-        console.log('Connected to R successfully: R v' + res)
-        createWindow()
+  /* Sometimes the Rserve client doesn't completely load,
+   * so we need to keep trying until it does.
+   */
+  while (Rdaemon === undefined) {
+    global.Rtries += 1
+    if (global.Rtries > 5) {
+      dialog.showMessageBox({
+        title: 'Unable to launch iNZight',
+        message: 'We\'re having trouble launching iNZight - please try again.\n\n' +
+          'If you continue to see this message, try reinstalling, or contact support.'
       })
+      app.quit()
+      break
+    }
+    try {
+      Rdaemon = execSync('R -e \'Rserve::Rserve(args = "--no-save")\'', {
+        timeout: 2000
+      })
+    } catch (e) {
+      console.log('Error: ' + e + '\n\n Trying again [' + global.Rtries + '] ...')
+    }
+  }
+  console.log('Rserve client launched.')
+  
+  global.Rcon = Rserve.connect('localhost', 6311, function () {
+    global.Rcon.eval('as.character(getRversion())', function (err, res) {
+      if (err) {
+        throw err
+      }
+      global.Rversion = res[0]
+      console.log('Connected to R successfully: R v' + res)
+      createWindow()
     })
   })
 }
