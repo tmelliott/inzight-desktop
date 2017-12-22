@@ -163,34 +163,37 @@ function startRdaemon () {
   /* Sometimes the Rserve client doesn't completely load,
    * so we need to keep trying until it does.
    */
-  while (Rdaemon === undefined) {
+  while (Rdaemon === undefined && global.Rtries < 5) {
     global.Rtries += 1
-    if (global.Rtries > 5) {
-      dialog.showMessageBox({
-        title: 'Unable to launch iNZight',
-        message: 'We\'re having trouble launching iNZight - please try again.\n\n' +
-          'If you continue to see this message, try reinstalling, or contact support.'
-      })
-      app.quit()
-      break
-    }
     try {
-      Rdaemon = execSync('R -e \'Rserve::Rserve(args = "--no-save")\'', {
-        timeout: 2000
+      Rdaemon = execSync('/usr/local/bin/R -e \'Rserve::Rserve(args = "--no-save")\'', {
+        timeout: 3000
       })
     } catch (e) {
       console.log('Error: ' + e + '\n\n Trying again [' + global.Rtries + '] ...')
     }
+    console.log('attempted')
   }
+  if (Rdaemon === undefined) {
+    dialog.showMessageBox({
+      title: 'Unable to launch iNZight',
+      message: 'We\'re having trouble launching iNZight - please try again.\n\n' +
+        'Failed after ' + global.Rtries + ' attempts.\n\n' +
+        'If you continue to see this message, try reinstalling, or contact support.'
+    })
+    app.quit()
+    return
+  }
+
   console.log('Rserve client launched.')
-  
+
   global.Rcon = Rserve.connect('localhost', 6311, function () {
     global.Rcon.eval('as.character(getRversion())', function (err, res) {
       if (err) {
         throw err
       }
       global.Rversion = res[0]
-      console.log('Connected to R successfully: R v' + res)
+      console.log('Connected to R successfully: R ' + res[0])
       createWindow()
     })
   })
