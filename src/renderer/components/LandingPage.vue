@@ -56,7 +56,8 @@
         this.$electron.shell.openExternal(link)
       },
       loadData (data) {
-        this.$router.push('/main')
+        console.log(this.$electron.remote.app)
+        // this.$router.push('/main')
       }
     }
   }
