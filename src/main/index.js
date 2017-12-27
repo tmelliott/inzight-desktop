@@ -159,6 +159,8 @@ let Rdaemon
 // global.Rcon = 0
 global.Rtries = 0
 
+// let timeoutProtect
+
 function startRdaemon () {
   /* Sometimes the Rserve client doesn't completely load,
    * so we need to keep trying until it does.
@@ -187,16 +189,21 @@ function startRdaemon () {
 
   console.log('Rserve client launched.')
 
-  global.Rcon = Rserve.connect('localhost', 6311, function () {
-    global.Rcon.eval('as.character(getRversion())', function (err, res) {
-      if (err) {
-        throw err
-      }
-      global.Rversion = res[0]
-      console.log('Connected to R successfully: R ' + res[0])
-      createWindow()
+  /* For some reason, on Linux at least, this doesn't work unless
+   * it has a short timeout ...
+   */
+  setTimeout(() => {
+    global.Rcon = Rserve.connect('localhost', 6311, function () {
+      global.Rcon.eval('as.character(getRversion())', function (err, res) {
+        if (err) {
+          throw err
+        }
+        global.Rversion = res[0]
+        console.log('Connected to R successfully: R ' + res[0])
+        createWindow()
+      })
     })
-  })
+  }, 1000)
 }
 
 /**
